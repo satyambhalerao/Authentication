@@ -4,9 +4,9 @@ import  express from "express";
 import  ejs from "ejs"
 import  bodyParser from "body-parser"
 import mongoose from "mongoose"
-import md5 from 'md5'
+import bcrypt from 'bcrypt'
 
-
+const saltRounds = 10
 
 
 mongoose.connect("mongodb://127.0.0.1:27017/userDB",).then(
@@ -37,10 +37,11 @@ res.render("login");
 });
 app.post("/login", async function(req, res) {
     const username = req.body.username
-    const password = md5(req.body.password)
+    const password = req.body.password
     const user = await userModel.findOne({Email: username})
-        if(user.Password === password)
-        {     
+    bcrypt.compare(password, user.Password, function(err, result) {
+        if(result)
+        {
             console.log("Success")
             res.render("secrets");
         }
@@ -49,17 +50,22 @@ app.post("/login", async function(req, res) {
             console.log("UnSuccess")
             res.render("login");
         }
+
+    });
     });
 app.get("/register",(req,res)=>{
     res.render("register")
 })
 app.post("/register",(req,res)=>{
-    const user = new  userModel(
-        {Email:req.body.username,
-        Password:md5(req.body.password)
-        }
-    )
-    user.save()
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+        const user = new  userModel(
+            {Email:req.body.username,
+            Password:hash
+            }
+        )
+        user.save()
+    });
+
     res.redirect("/login")
 })
 app.get("/secrets",(req,res)=>{
